@@ -1,0 +1,8 @@
+smtplib
+sched
+hashlib
+Crypto.Cipher
+configparser
+json
+werkzeug.security
+sqlalchemy.exc

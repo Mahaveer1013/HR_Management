@@ -118,7 +118,7 @@ def calculate_Attendance():
                 attendance.earlyGoingBy = earlyGoingBy
                 attendance.TotalDuration = calculate_time_difference(inTime, out_time)
                 attendance.overtime = "00:00"
-def calculate_time_difference(time1_str, time2_str):
+'''def calculate_time_difference(time1_str, time2_str):
     # Convert time strings to datetime objects
     time1 = datetime.strptime(time1_str, '%H:%M')
     time2 = datetime.strptime(time2_str, '%H:%M')
@@ -129,6 +129,8 @@ def calculate_time_difference(time1_str, time2_str):
   
     # Calculate the time difference
     time_difference = time1-time2
+    if time_difference.total_seconds() < 0:
+        time_difference += datetime.timedelta(days=1)
 
     # Calculate the total minutes in the time difference
     total_minutes = time_difference.total_seconds() // 60
@@ -139,7 +141,29 @@ def calculate_time_difference(time1_str, time2_str):
 
     # Format the time difference as H:MM
     formatted_difference = f"{int(hours)}:{int(minutes):02d}"
+    return formatted_difference'''
+
+def calculate_time_difference(time1_str, time2_str):
+    # Convert time strings to datetime objects
+    time1 = datetime.strptime(time1_str, '%H:%M')
+    time2 = datetime.strptime(time2_str, '%H:%M')
+    
+    # Calculate time difference
+    time_difference = time2 - time1
+    
+    # Calculate total minutes
+    total_minutes = time_difference.total_seconds() // 60
+
+    # Calculate positive time difference by considering the 24-hour clock
+    if total_minutes < 0:
+        total_minutes += 24 * 60  # Adding 24 hours' worth of minutes
+    
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+
+    formatted_difference = f"{int(hours)}:{int(minutes):02d}"
     return formatted_difference
+
 def update_wages_for_present_employees():
     
     current_date = datetime.datetime.now().date()
