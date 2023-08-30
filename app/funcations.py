@@ -144,6 +144,7 @@ def calculate_Attendance():
     return formatted_difference'''
 
 def calculate_time_difference(time1_str, time2_str):
+    # bb
     # Convert time strings to datetime objects
     time1 = datetime.strptime(time1_str, '%H:%M')
     time2 = datetime.strptime(time2_str, '%H:%M')

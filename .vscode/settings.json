@@ -3,5 +3,8 @@
     "python.analysis.extraPaths": [
         "./app",
         "./app"
+    ],
+    "githubPullRequests.ignoredPullRequestBranches": [
+        "main"
     ]
 }
