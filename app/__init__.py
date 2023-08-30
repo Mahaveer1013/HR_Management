@@ -17,7 +17,7 @@ def create_app():
     #
     #app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}'.format(DB_NAME)
     db_path = os.path.abspath(os.path.dirname(__file__))  # Get the directory of the main script
-    #app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(db_path, DB_NAME)}'
+    #app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{o s.path.join(db_path, DB_NAME)}'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}'.format(os.path.join(db_path, DB_NAME))
     
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS']= False
