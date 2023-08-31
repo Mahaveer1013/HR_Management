@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import smtplib
+import schedule
 import os
 from flask import current_app as app
 from flask import  flash,redirect
@@ -69,27 +70,21 @@ def calculate_Attendance():
 
         for attendance in attendance_records:
             # Extract attendance information
-            print("SF: ", attendance.shift)
-            shift = Shift_time.query.filter_by(id=1).first()
-            print("SHIFT: ", shift)
+            shift = Shift_time.query.filter_by(shiftType=attendance.employee.shift).first()
             inTime = attendance.inTime
-            print("IN TIME: ", inTime)
             shiftIntime = shift.shiftIntime
-            print("SHIFT INTIME:", shiftIntime)
             shiftOuttime = shift.shift_Outtime
 
             # Calculate the lateBy time
             lateBy = calculate_time_difference(shiftIntime, inTime)
-            
-                
             attendance.lateBy = lateBy
-            
 
             if attendance.outTime != "00:00":
                 outTime = attendance.outTime
 
                 # Calculate the earlyGoingBy time
-                earlyGoingBy = calculate_time_difference(shiftOuttime, outTime)
+                #
+                earlyGoingBy = calculate_time_difference(outTime, shiftOuttime)
                 if "-" in earlyGoingBy:
                     attendance.earlyGoingBy = "00:00"
                 else:
@@ -97,72 +92,43 @@ def calculate_Attendance():
 
                 # Calculate the time duration between inTime and outTime
                 time_worked = calculate_time_difference(outTime, inTime)
-                print("Time Worked: ", time_worked)
                 if "-" in time_worked:
                     attendance.TotalDuration = "00:00"
                 else:
                     attendance.TotalDuration = time_worked
 
                 # Calculate the overtime hours
-                overtime_hours = calculate_time_difference(outTime, shiftOuttime)
-                print("OVER TIME: ", overtime_hours)
-                
-                
+                overtime_hours = calculate_time_difference(shiftOuttime, outTime)
                 attendance.overtime = overtime_hours
-                print("attendance.overtime: ",attendance.overtime)
-                return db.session.commit()
-                
             else:
                 out_time = datetime.now().strftime("%H:%M")
                 earlyGoingBy = calculate_time_difference(out_time, shiftOuttime)
                 attendance.earlyGoingBy = earlyGoingBy
                 attendance.TotalDuration = calculate_time_difference(inTime, out_time)
                 attendance.overtime = "00:00"
-'''def calculate_time_difference(time1_str, time2_str):
-    # Convert time strings to datetime objects
-    time1 = datetime.strptime(time1_str, '%H:%M')
-    time2 = datetime.strptime(time2_str, '%H:%M')
-    # Find the minimum and maximum time
-    # min_time = min(time1, time2)
-    # max_time = max(time1, time2)
+            
+            # Commit the changes for each attendance record
+            db.session.commit()
 
-  
-    # Calculate the time difference
-    time_difference = time1-time2
-    if time_difference.total_seconds() < 0:
-        time_difference += datetime.timedelta(days=1)
 
-    # Calculate the total minutes in the time difference
-    total_minutes = time_difference.total_seconds() // 60
 
-    # Calculate hours and remaining minutes
-    hours = total_minutes // 60
-    minutes = total_minutes % 60
-
-    # Format the time difference as H:MM
-    formatted_difference = f"{int(hours)}:{int(minutes):02d}"
-    return formatted_difference'''
 
 def calculate_time_difference(time1_str, time2_str):
-    # bb
-    # Convert time strings to datetime objects
-    time1 = datetime.strptime(time1_str, '%H:%M')
-    time2 = datetime.strptime(time2_str, '%H:%M')
+    # Convert time strings to datetime objects (without seconds)
+    time_format = '%H:%M'
+    time1 = datetime.strptime(time1_str, time_format)
+    time2 = datetime.strptime(time2_str, time_format)
     
-    # Calculate time difference
-    time_difference = time2 - time1
+    # Calculate time difference in seconds
+    time_difference_seconds = (time2 - time1).total_seconds()
+    print("TEST:",time_difference_seconds)
     
-    # Calculate total minutes
-    total_minutes = time_difference.total_seconds() // 60
-
-    # Calculate positive time difference by considering the 24-hour clock
-    if total_minutes < 0:
-        total_minutes += 24 * 60  # Adding 24 hours' worth of minutes
-    
-    hours = total_minutes // 60
+    # Convert seconds to hours and minutes
+    total_minutes = time_difference_seconds // 60
+    total_hours = total_minutes // 60
     minutes = total_minutes % 60
 
-    formatted_difference = f"{int(hours)}:{int(minutes):02d}"
+    formatted_difference = f"{int(total_hours)}:{int(minutes):02d}"
     return formatted_difference
 
 def update_wages_for_present_employees():
@@ -202,34 +168,44 @@ def update_wages_for_present_daily_workers():
    
     return db.session.commit()
 
-def schedule_next_sunday():
-    # Calculate the time until the next Sunday
-    now = datetime.now()
-    days_until_sunday = (6 - now.weekday()) % 7  # Sunday is 6 in the Python datetime weekday representation
-    next_sunday = now + timedelta(days=days_until_sunday)
 
-    # Schedule the function to run on the next Sunday at midnight (00:00:00)
-    next_sunday_midnight = datetime(next_sunday.year, next_sunday.month, next_sunday.day)
-    scheduler.enterabs(time.mktime(next_sunday_midnight.timetuple()), 1, run_for_all_employees, ())
+# def schedule_function(emp_id):
+#     schedule.every(2).days.do(count_attendance_and_update_shift,emp_id)
 
- 
+# schedule_function(emp_id)
+
+
 
 
 def count_attendance_and_update_shift(emp_id):
     # Get the employee's attendance records
     employee = Employee.query.get(emp_id)
     if employee:
-        attendance_count = len(employee.attendance)
+        attendance_count = len(employee.attendances)
+        print(attendance_count)
         
         # Update the shift if the attendance count is 6
-        if attendance_count == 6:
-            employee.shift = "New Shift Value"  # Replace "New Shift Value" with the appropriate value
+        if attendance_count == 2:
+
+            shifts = ['8G', '8A', '8C', '8B', 'GS', '12A', '12B', '10A']
+            current_shift_index = shifts.index(employee.shift)
+            new_shift_index = (current_shift_index + 1) % len(shifts)
+            employee.shift = shifts[new_shift_index]
             db.session.commit()
         
-        return attendance_count
+        return attendance_count()
     else:
         return 0
     
+# def schedule_function(emp_id):
+#     schedule.every(2).days.at("00:00").do(count_attendance_and_update_shift, emp_id)
+
+# schedule_function(emp_id)
+
+# while schedule.get_jobs():
+#     schedule.run_pending()
+#     time.sleep(1)
+
 def count_attendance_and_update_shift_periodic(emp_id):
     # Replace employee_id_to_check with the actual employee ID you want to check
     attendance_count = count_attendance_and_update_shift(emp_id)
@@ -245,8 +221,113 @@ def run_for_all_employees():
         count_attendance_and_update_shift_periodic(employee.id)
 
     # Schedule the function to run again on the next Sunday
-    schedule_next_sunday()
+    
 
+
+
+# def attend_excel_data(file_path):
+#     if os.path.exists(file_path):
+#         sheet_names = pd.ExcelFile(file_path).sheet_names
+
+#         for sheet_name in sheet_names:
+#             df = None
+#             if file_path.lower().endswith('.xlsx'):
+#                 df = pd.read_excel(file_path, sheet_name, engine='openpyxl')
+#             elif file_path.lower().endswith('.xls'):
+#                 df = pd.read_excel(file_path, sheet_name, engine='xlrd')
+#             else:
+#                 print("Unsupported file format")
+#                 return  # Handle unsupported format
+
+#             for index, row in df.iterrows():
+#                 empid = row['emp_id']
+#                 print("Processing: ", empid)
+#                 date=pd.to_datetime(row['date']) if pd.notna(row['date']) else None
+#                 existing_emp = db.session.query(Employee).filter_by(id=empid).first()
+#                 if  existing_emp:
+                    
+#                     if str(row['intime']) =="00:00" and str(row['outtime'])== "00:00":
+                            
+#                             existing_emp.emp_id=empid,
+#                             existing_emp.inTime=str(row['intime']),
+#                             existing_emp.shift_Outtime=str(row['outtime']),
+#                             existing_emp.shiftType=existing_emp.attendances.shift,
+#                             existing_emp.attendance='Absent',
+#                             existing_emp.date=date
+                        
+                        
+#                     else:
+                                      
+#                             existing_emp.emp_id=empid,
+#                             existing_emp.inTime=str(row['intime']),
+#                             existing_emp.shift_Outtime=str(row['outtime']),
+#                             existing_emp.shiftType=existing_emp.attendances.shift,
+#                             existing_emp.attendance='Present',
+#                             existing_emp.date=date
+                        
+                       
+                        
+
+      
+#     else:
+#         print("File not found")
+
+
+def addemployee(file_path):
+    if os.path.exists(file_path):
+        _, file_extension = os.path.splitext(file_path)
+        
+        if file_extension.lower() == '.xlsx' or file_extension.lower() == '.xls':
+            sheet_names = pd.ExcelFile(file_path).sheet_names
+        elif file_extension.lower() == '.csv':
+            sheet_names = [None]  # For CSV, we don't need sheet names
+        else:
+            return print("Unsupported file format")
+
+        data_to_insert = []
+
+        for sheet_name in sheet_names:
+            if file_extension.lower() == '.xlsx' or file_extension.lower() == '.xls':
+                if sheet_name:
+                    df = pd.read_excel(file_path, sheet_name, engine='openpyxl')
+                else:
+                    df = pd.read_excel(file_path, engine='openpyxl')
+            elif file_extension.lower() == '.csv':
+                df = pd.read_csv(file_path)
+            else:
+                return print("Unsupported file format")
+
+            for index, row in df.iterrows():
+                empid = row['emp_id']
+                print("Processing: ", empid)
+                dob = pd.to_datetime(row['dob']) if pd.notna(row['dob']) else None
+
+                existing_emp = db.session.query(Employee).filter_by(id=empid).first()
+                if not existing_emp:
+                    data_to_insert.append({
+                        'id': empid,
+                        'name': row['name'],
+                        'dob': dob,
+                        'designation': row['designation'],
+                        'workType': row['workType'],
+                        'email': row['email'],
+                        'phoneNumber': row['phoneNumber'],
+                        'adharNumber': row['adharNumber'],
+                        'gender': row['gender'],
+                        'address': row['address'],
+                        'shift': row['shift']
+                    })
+                else:
+                    print(f"Employee with ID {empid} already exists.")
+
+        if data_to_insert:
+            db.session.bulk_insert_mappings(Employee, data_to_insert)
+            db.session.commit()
+            print("Data added successfully.")
+        else:
+            print("No new data to add.")
+    else:
+        print("File not found")
 
 
 def attend_excel_data(file_path):
@@ -266,81 +347,40 @@ def attend_excel_data(file_path):
             for index, row in df.iterrows():
                 empid = row['emp_id']
                 print("Processing: ", empid)
-                date=pd.to_datetime(row['date']) if pd.notna(row['date']) else None
+                date = pd.to_datetime(row['date']) if pd.notna(row['date']) else None
                 existing_emp = db.session.query(Employee).filter_by(id=empid).first()
-                if  existing_emp:
-                    
-                    if str(row['intime']) =="00:00" and str(row['outtime'])== "00:00":
-                            
-                            existing_emp.emp_id=empid,
-                            existing_emp.inTime=str(row['intime']),
-                            existing_emp.shift_Outtime=str(row['outtime']),
-                            existing_emp.shiftType=existing_emp.attendances.shift,
-                            existing_emp.attendance='Absent',
-                            existing_emp.date=date
+                if existing_emp:
+                    attendance_status = 'Absent' if str(row['intime']) == "00:00" and str(row['outtime']) == "00:00" else 'Present'
+                    shift_type = None
+                  
+                        # Assuming you want to access the first attendance record's shift
+                    shift_type = existing_emp.shift
+                    shitfTime=  Shift_time.query.filter_by(shiftType=existing_emp.shift).first()
+                    attendance = Attendance(
+                        emp_id=empid,
+                        inTime=str(row['intime']),
+                        outTime=str(row['outtime']),
+                        shiftType=shift_type,
+                        attendance=attendance_status,
+                        date=date,
+                        shiftIntime=shitfTime.shiftIntime,
+                        shift_Outtime=shitfTime.shift_Outtime,
                         
                         
-                    else:
-                                      
-                            existing_emp.emp_id=empid,
-                            existing_emp.inTime=str(row['intime']),
-                            existing_emp.shift_Outtime=str(row['outtime']),
-                            existing_emp.shiftType=existing_emp.attendances.shift,
-                            existing_emp.attendance='Present',
-                            existing_emp.date=date
                         
-                       
-                        
-
-        db.session.commit()
-    else:
-        print("File not found")
-
-
-def addemployee(file_path):
-    if os.path.exists(file_path):
-        sheet_names = pd.ExcelFile(file_path).sheet_names
-        
-
-        for sheet_name in sheet_names:
-            df = None
-            if file_path.lower().endswith('.xlsx'):
-                df = pd.read_excel(file_path, sheet_name, engine='openpyxl')
-            elif file_path.lower().endswith('.xls'):
-                df = pd.read_excel(file_path, sheet_name, engine='xlrd')
-            else:
-                
-                return print("Unsupported file format")  # Handle unsupported format
-            
-            for index, row in df.iterrows():
-                empid = row['emp_id']
-                print("Processing: ", empid)
-                dob = pd.to_datetime(row['dob']) if pd.notna(row['dob']) else None
-
-                existing_emp = db.session.query(Employee).filter_by(id=empid).first()
-                if not existing_emp:
-                    # Create and add a new Employee only if it doesn't exist
-                    new_employee = Employee(
-                        id=empid,  # Assuming emp_id is the primary key
-                        name=row["name"],
-                        dob=dob,
-                        designation=row["designation"],
-                        workType=row["workType"],
-                        email=row["email"],
-                        phoneNumber=row["phoneNumber"],
-                        adharNumber=row["adharNumber"],
-                        gender=row["gender"],
-                        address=row["address"],
-                        shift=row["shift"]
                     )
-                    db.session.add(new_employee)
-                else:
-                    print(f"Employee with ID {empid} already exists.")
+                    db.session.add(attendance)
 
         db.session.commit()
-        print("Data added successfully.")
     else:
         print("File not found")
 
-
+def delete_all_employees():
+    try:
+        db.session.query(Employee).delete()
+        db.session.commit()
+        print("All employee data deleted successfully.")
+    except Exception as e:
+        db.session.rollback()
+        print("An error occurred:", str(e))
 

@@ -4,12 +4,12 @@ import datetime
 import sched
 import time
 from datetime import datetime, timedelta
-from app import funcations
+
 
 app = create_app() 
 
 if __name__ == '__main__':
-    # Schedule the first task test
+    # Schedule the first task
     # funcations.schedule_next_sunday()
 
     # Run the scheduler in a separate thread

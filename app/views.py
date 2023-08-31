@@ -29,7 +29,7 @@ def admin():
         db.session.rollback()  # Rollback in case of error
     
     # employee =Employee.query.order_by(Employee.id)
-    employee =Attendance.query.order_by(Attendance.date)   
+    employee =Attendance.query.order_by(Attendance.id)   
     # sihft=Shift_time.query.order_by(Shift_time.id) 
     return render_template('admin.html',employee=employee)
 
@@ -128,6 +128,11 @@ def profileView():
 def calculate():
     
     calculate_Attendance()
+    # lol=Shift_time.query.filter_by(id=5).first()
+    # lol.shiftIntime="14:00"
+    # lol.shift_Outtime="22:00"
+    # db.session.commit()
+    # print(lol.shift_Outtime)
     
     return redirect('/')
             
@@ -162,7 +167,18 @@ def viewShift():
 
 @views.route('/attendance')
 def readXl_update_atten():
-
+    try:
+        excel_file_path = os.path.join(app.config['Excel_FOLDER'], 'duplicate_data_updated.xlsx')
+        print("EXCEL", excel_file_path)
+        attend_excel_data(excel_file_path)  # Call the data processing function
+        
+        db.session.commit()  # Commit the changes
+        flash("Employee data updated successfully.", "success")  # Provide a success message
+        
+    except Exception as e:
+        print("Error occurred:", e)
+        db.session.rollback() 
+        flash("An error occurred while updating employee data.", "error")
     
     return redirect(url_for('views.calculate'))
 

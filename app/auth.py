@@ -66,11 +66,11 @@ def addemp():
         workType = request.form.get('worktype')
         phoneNumber = request.form.get('phnumber')
         adharNumber = request.form.get('aadhar')
-        wages_per_Day = request.form.get('wages_per_Day')
+        #wages_per_Day = request.form.get('wages_per_Day')
         gender = request.form.get('gender')
         address = request.form.get('address')
         email = request.form.get('email')
-        attendance = request.form.get('attendance')
+        #attendance = request.form.get('attendance')
         shift = request.form.get('shift')
         designation = request.form.get('designation')
 
@@ -126,7 +126,7 @@ def addemp():
 
     return redirect(url_for('views.admin'))
 
-@auth.route('/attendance', methods=['POST', 'GET'])
+@auth.route('/addemp', methods=['POST', 'GET'])
 @login_required
 def attendance():    
     try:
@@ -141,9 +141,23 @@ def attendance():
         print("Error occurred:", e)
         db.session.rollback() 
         flash("An error occurred while updating employee data.", "error")
+    return redirect(url_for('views.admin'))
 
 # @db.event.listens_for(Attendance, 'after_update')
 # def copy_to_backup_ateend(mapper, connection, target):
 #     # Create a new instance of BackupAteend and populate its attributes
 
 #     db.session.commit()
+@auth.route('/lol')
+def update_Shift():
+    count_attendance_and_update_shift(101)
+    return redirect('/')
+
+def schedule_function(emp_id):
+    schedule.every(2).days.at("00:00").do(count_attendance_and_update_shift, emp_id)
+
+schedule_function(101)
+
+while schedule.get_jobs():
+    schedule.run_pending()
+    time.sleep(1)

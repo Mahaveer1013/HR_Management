@@ -39,7 +39,7 @@ class Attendance(db.Model,UserMixin):
     outTime=db.Column(db.String(150))
     overtime=db.Column(db.String(150),default='00:00')
     employee = db.relationship('Employee', back_populates='attendances')
-    
+    shiftType=db.Column(db.String(150))
     shiftIntime = db.Column(db.String(150))
     shift_Outtime = db.Column(db.String(150))
     TotalDuration=db.Column(db.String(150))
