@@ -125,6 +125,10 @@ def calculate_time_difference(time1_str, time2_str):
     
     # Convert seconds to hours and minutes
     total_minutes = time_difference_seconds // 60
+
+    if total_minutes < 0:
+        total_minutes += 24 * 60
+
     total_hours = total_minutes // 60
     minutes = total_minutes % 60
 
@@ -185,9 +189,9 @@ def count_attendance_and_update_shift(emp_id):
         print(attendance_count)
         
         # Update the shift if the attendance count is 6
-        if attendance_count == 2:
+        if attendance_count % 2== 0:
 
-            shifts = ['8G', '8A', '8C', '8B', 'GS', '12A', '12B', '10A']
+            shifts = ['8G', '8A', '8C', '8B', 'GS', '12A', '12B', '10A', 'WO']
             current_shift_index = shifts.index(employee.shift)
             new_shift_index = (current_shift_index + 1) % len(shifts)
             employee.shift = shifts[new_shift_index]
